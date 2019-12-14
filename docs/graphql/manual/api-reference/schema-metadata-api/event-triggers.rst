@@ -95,7 +95,7 @@ Args syntax
    * - replace
      - false
      - Boolean
-     - If set to true, event trigger is replaced with the new definition
+     - If set to true, the event trigger is replaced with the new definition
 
 .. _delete_event_trigger:
 
@@ -133,6 +133,48 @@ Args syntax
      - true
      - TriggerName_
      - Name of the event trigger
+
+.. _invoke_event_trigger:
+
+invoke_event_trigger
+--------------------
+
+``invoke_event_trigger`` is used to invoke an event trigger manually.
+
+.. code-block:: http
+
+   POST /v1/query HTTP/1.1
+   Content-Type: application/json
+   X-Hasura-Role: admin
+
+   {
+       "type" : "invoke_event_trigger",
+       "args" : {
+           "name": "sample_trigger",
+           "payload": {}
+       }
+   }
+
+.. _invoke_event_trigger_syntax:
+
+Args syntax
+^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Key
+     - Required
+     - Schema
+     - Description
+   * - name
+     - true
+     - TriggerName_
+     - Name of the event trigger
+   * - payload
+     - true
+     - JSON
+     - Some JSON payload to send to trigger
  
 .. _TriggerName:
 
@@ -158,7 +200,7 @@ OperationSpec
    * - columns
      - true
      - EventTriggerColumns_
-     - List of columns or "*" to listen changes on
+     - List of columns or "*" to listen to changes
    * - payload
      - false
      - EventTriggerColumns_

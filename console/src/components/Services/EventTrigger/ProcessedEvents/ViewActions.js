@@ -6,8 +6,11 @@ import { findTableFromRel } from '../utils';
 import {
   showSuccessNotification,
   showErrorNotification,
-} from '../Notification';
+} from '../../Common/Notification';
 import dataHeaders from '../Common/Headers';
+import { getConfirmation } from '../../../Common/utils/jsUtils';
+import globals from '../../../../Globals';
+import { IMPROVED_EVENT_FETCH_QUERY } from '../../../../helpers/versionUtils';
 
 /* ****************** View actions *************/
 const V_SET_DEFAULTS = 'ProcessedEvents/V_SET_DEFAULTS';
@@ -44,9 +47,6 @@ const vMakeRequest = () => {
     const state = getState();
     const url = Endpoints.query;
     const originalTrigger = getState().triggers.currentTrigger;
-    const triggerList = getState().triggers.triggerList;
-    const triggerSchema = triggerList.filter(t => t.name === originalTrigger);
-    const triggerName = triggerSchema[0].name;
     const currentQuery = JSON.parse(JSON.stringify(state.triggers.view.query));
     // count query
     const countQuery = JSON.parse(JSON.stringify(state.triggers.view.query));
@@ -64,7 +64,7 @@ const vMakeRequest = () => {
       currentQuery.columns[1].where = { $and: finalAndClause };
       currentQuery.where = { name: state.triggers.currentTrigger };
       countQuery.where.$and.push({
-        trigger_name: state.triggers.currentTrigger,
+        trigger_name: originalTrigger,
       });
     } else {
       // reset where for events
@@ -76,10 +76,21 @@ const vMakeRequest = () => {
       currentQuery.where = { name: state.triggers.currentTrigger };
       countQuery.where = {
         $and: [
-          { trigger_name: triggerName },
+          { trigger_name: state.triggers.currentTrigger },
           { $or: [{ delivered: { $eq: true } }, { error: { $eq: true } }] },
         ],
       };
+    }
+
+    if (
+      globals.featuresCompatibility &&
+      globals.featuresCompatibility[IMPROVED_EVENT_FETCH_QUERY]
+    ) {
+      if (currentQuery.columns[1]) {
+        currentQuery.columns[1].where = currentQuery.columns[1].where || {};
+        currentQuery.columns[1].where.archived = false;
+      }
+      countQuery.where.archived = false;
     }
 
     // order_by for relationship
@@ -162,10 +173,12 @@ const vMakeRequest = () => {
 
 const deleteItem = pkClause => {
   return (dispatch, getState) => {
-    const isOk = confirm('Permanently delete this row?');
+    const confirmMessage = 'This will permanently delete this row';
+    const isOk = getConfirmation(confirmMessage);
     if (!isOk) {
       return;
     }
+
     const state = getState();
     const url = Endpoints.query;
     const reqBody = {
@@ -195,9 +208,7 @@ const deleteItem = pkClause => {
         );
       },
       err => {
-        dispatch(
-          showErrorNotification('Deleting row failed!', err.error, reqBody, err)
-        );
+        dispatch(showErrorNotification('Deleting row failed!', err.error, err));
       }
     );
   };

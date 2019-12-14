@@ -1,3 +1,5 @@
+.. _hge_flags:
+
 GraphQL engine server configuration
 ===================================
 
@@ -21,6 +23,7 @@ The following are a few configuration use cases:
 - :ref:`add-admin-secret`
 - :ref:`cli-with-admin-secret`
 - :ref:`configure-cors`
+- :ref:`console-assets-on-server`
 
 .. toctree::
    :hidden:

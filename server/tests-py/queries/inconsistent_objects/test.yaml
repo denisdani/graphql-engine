@@ -7,7 +7,7 @@ setup:
     args:
       sql: |
         create table author(
-            id serial primary key, 
+            id serial primary key,
             name text unique
         );
         create table article(
@@ -24,7 +24,7 @@ setup:
     args:
       schema: public
       name: article
-  
+
   #Object relationship
   - type: create_object_relationship
     args:
@@ -32,7 +32,7 @@ setup:
       name: author
       using:
         foreign_key_constraint_on: author_id
-  
+
   #Array relationship
   - type: create_array_relationship
     args:
@@ -51,25 +51,33 @@ inconsistent_objects:
     using:
       foreign_key_constraint_on:
         column: author_id
-        table: article
+        table:
+          schema: public
+          name: article
     name: articles
-    comment: 
-    table: author
+    comment:
+    table:
+      schema: public
+      name: author
   reason: table "article" does not exist
   type: array_relation
 - definition:
     using:
       foreign_key_constraint_on: author_id
     name: author
-    comment: 
-    table: article
+    comment:
+    table:
+      schema: public
+      name: article
   reason: table "article" does not exist
   type: object_relation
-- definition: article
-  reason: 'no such table/view exists in postgres : "article"'
+- definition:
+    schema: public
+    name: article
+  reason: 'no such table/view exists in postgres: "article"'
   type: table
 
-# Teardown 
+# Teardown
 teardown:
   type: bulk
   args:
@@ -77,4 +85,3 @@ teardown:
     args:
       sql: |
         drop table author
-

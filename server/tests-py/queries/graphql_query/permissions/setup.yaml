@@ -6,7 +6,7 @@ args:
   args:
     sql: |
       create table author(
-          id serial primary key, 
+          id serial primary key,
           name text unique,
           is_registered boolean not null default false,
           remarks_internal text
@@ -98,7 +98,7 @@ args:
     permission:
       columns:
       - id
-      - name 
+      - name
       - is_registered
       filter:
         _or:
@@ -116,7 +116,7 @@ args:
     permission:
       columns:
       - id
-      - name 
+      - name
       filter:
         articles:
           is_published:
@@ -151,7 +151,7 @@ args:
     - title: Article 1
       content: Sample article content 1
       author_id: 1
-      is_published: false 
+      is_published: false
 
     - title: Article 2
       content: Sample article content 2
@@ -242,6 +242,28 @@ args:
         Artist:
           id: X-Hasura-Artist-Id
       allow_aggregations: true
+
+#Create select permssion on Track using _in operator
+- type: create_select_permission
+  args:
+    table: Artist
+    role: free_user_in
+    permission:
+      columns: '*'
+      filter:
+        name:
+          _in: X-Hasura-Free-Artists
+
+#Create select permssion on Track using _nin operator
+- type: create_select_permission
+  args:
+    table: Artist
+    role: free_user_nin
+    permission:
+      columns: '*'
+      filter:
+        name:
+          _nin: X-Hasura-Premium-Artists
 
 # Create search_track function
 - type: run_sql
@@ -347,13 +369,26 @@ args:
   args:
     sql: |
        CREATE TABLE jsonb_table(
-         id SERIAL PRIMARY KEY,
+         id INTEGER NOT NULL PRIMARY KEY,
          jsonb_col jsonb NOT NULL
        );
 - type: track_table
   args:
     name: jsonb_table
     schema: public
+
+#Insert data
+- type: insert
+  args:
+    table: jsonb_table
+    objects:
+    - id: 1
+      jsonb_col:
+        name: Hasura
+        age: 7
+    - id: 2
+      jsonb_col:
+        name: Cross
 
 #Create select permission using jsonb operator
 - type: create_select_permission
@@ -367,7 +402,7 @@ args:
       filter:
         jsonb_col:
           $has_key: age
-      
+
 - type: create_select_permission
   args:
     table: jsonb_table
@@ -380,16 +415,31 @@ args:
         jsonb_col:
           $has_key: X-Hasura-Has-Key
 
-#Insert data
-- type: insert
+# Using jsonb column and $has_keys_any operator
+- type: create_select_permission
   args:
     table: jsonb_table
-    objects:
-    - jsonb_col:
-        name: Hasura
-        age: 7
-    - jsonb_col:
-        name: Cross
+    role: user4
+    permission:
+      columns:
+      - id
+      - jsonb_col
+      filter:
+        jsonb_col:
+          $has_keys_any: X-Hasura-Json-Keys
+
+# Using jsonb column and $has_keys_all operator
+- type: create_select_permission
+  args:
+    table: jsonb_table
+    role: user5
+    permission:
+      columns:
+      - id
+      - jsonb_col
+      filter:
+        jsonb_col:
+          $has_keys_all: X-Hasura-Json-Required-Keys
 
 #Create grade_point table
 - type: run_sql
@@ -428,3 +478,33 @@ args:
       - id
       - student_name
       filter: {}
+
+#Auction table
+- type: run_sql
+  args:
+    sql: |
+      CREATE TABLE auction (
+      id serial primary key,
+      price integer not null DEFAULT 250,
+      bid_price integer
+      );
+      INSERT INTO auction
+      (bid_price)
+      VALUES
+      (100), (120), (300), (260)
+      ;
+- type: track_table
+  args:
+    name: auction
+    schema: public
+- type: create_select_permission
+  args:
+    role: user
+    table: auction
+    permission:
+      filter:
+        bid_price:
+          $cgt: price
+      columns:
+      - id
+      - bid_price

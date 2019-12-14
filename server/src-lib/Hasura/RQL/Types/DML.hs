@@ -45,6 +45,7 @@ import           Hasura.RQL.Types.BoolExp
 import           Hasura.RQL.Types.Common
 import           Hasura.SQL.Types
 
+import           Control.Lens.TH
 import           Data.Aeson
 import           Data.Aeson.Casing
 import           Data.Aeson.TH
@@ -61,10 +62,12 @@ data ColExp
   = ColExp
   { ceCol :: !FieldName
   , ceVal :: !Value
-  } deriving (Show, Eq, Lift)
+  } deriving (Show, Eq, Lift, Data, Generic)
 
 newtype BoolExp
-  = BoolExp { unBoolExp :: GBoolExp ColExp } deriving (Show, Eq, Lift)
+  = BoolExp { unBoolExp :: GBoolExp ColExp } deriving (Show, Eq, Lift, Generic)
+
+$(makeWrapped ''BoolExp)
 
 instance ToJSON BoolExp where
   toJSON (BoolExp gBoolExp) =
@@ -260,7 +263,7 @@ data SelCol
 instance FromJSON SelCol where
   parseJSON (String s) =
     case AT.parseOnly parseWildcard s of
-    Left _  -> return $ SCExtSimple $ PGCol s
+    Left _  -> SCExtSimple <$> parseJSON (String s)
     Right x -> return $ SCStar x
   parseJSON v@(Object o) =
     SCExtRel
@@ -295,7 +298,7 @@ instance ToJSON SelectQueryT where
   toJSON (DMLQuery qt selQ) =
     object $ "table" .= qt : selectGToPairs selQ
 
-type InsObj = ColVals
+type InsObj = ColumnValues Value
 
 data ConflictAction
   = CAIgnore
@@ -350,7 +353,7 @@ data InsertTxConflictCtx
   } deriving (Show, Eq)
 $(deriveJSON (aesonDrop 3 snakeCase){omitNothingFields=True} ''InsertTxConflictCtx)
 
-type UpdVals = ColVals
+type UpdVals = ColumnValues Value
 
 data UpdateQuery
   = UpdateQuery

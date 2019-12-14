@@ -10,6 +10,7 @@ Pipfile.lock
 *.dyn_o
 *.dyn_hi
 .virtualenv
+.python-venv
 .hpc
 *.tix
 .hsenv
@@ -21,6 +22,7 @@ cabal.config
 *.hp
 TAGS
 .stack-work*
+*.log
 
 # ws related
 ws/

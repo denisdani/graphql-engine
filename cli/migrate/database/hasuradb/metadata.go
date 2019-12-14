@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/oliveagle/jsonpath"
+	v2yaml "gopkg.in/yaml.v2"
 )
 
 func (h *HasuraDB) ExportMetadata() (interface{}, error) {
@@ -13,7 +14,7 @@ func (h *HasuraDB) ExportMetadata() (interface{}, error) {
 		Args: HasuraArgs{},
 	}
 
-	resp, body, err := h.sendQuery(query)
+	resp, body, err := h.sendv1Query(query)
 	if err != nil {
 		h.logger.Debug(err)
 		return nil, err
@@ -30,13 +31,12 @@ func (h *HasuraDB) ExportMetadata() (interface{}, error) {
 		return nil, horror.Error(h.config.isCMD)
 	}
 
-	var hres interface{}
-	err = json.Unmarshal(body, &hres)
+	var hres v2yaml.MapSlice
+	err = v2yaml.Unmarshal(body, &hres)
 	if err != nil {
 		h.logger.Debug(err)
 		return nil, err
 	}
-
 	return hres, nil
 }
 
@@ -46,7 +46,7 @@ func (h *HasuraDB) ResetMetadata() error {
 		Args: HasuraArgs{},
 	}
 
-	resp, body, err := h.sendQuery(query)
+	resp, body, err := h.sendv1Query(query)
 	if err != nil {
 		h.logger.Debug(err)
 		return err
@@ -72,7 +72,7 @@ func (h *HasuraDB) ReloadMetadata() error {
 		Args: HasuraArgs{},
 	}
 
-	resp, body, err := h.sendQuery(query)
+	resp, body, err := h.sendv1Query(query)
 	if err != nil {
 		h.logger.Debug(err)
 		return err
@@ -106,7 +106,7 @@ func (h *HasuraDB) ApplyMetadata(data interface{}) error {
 		},
 	}
 
-	resp, body, err := h.sendQuery(query)
+	resp, body, err := h.sendv1Query(query)
 	if err != nil {
 		h.logger.Debug(err)
 		return err
@@ -151,7 +151,7 @@ func (h *HasuraDB) Query(data []interface{}) error {
 		Args: data,
 	}
 
-	resp, body, err := h.sendQuery(query)
+	resp, body, err := h.sendv1Query(query)
 	if err != nil {
 		h.logger.Debug(err)
 		return err

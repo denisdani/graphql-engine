@@ -6,12 +6,12 @@ Multiple mutations in a request
   :depth: 1
   :local:
 
-If multiple mutations are part of the same request, they are executed **sequentially**. If any of the mutations fail,
-all the executed mutations will be rolled back (i.e. all the mutations are run as a **transaction**).
+If multiple mutations are part of the same request, they are executed **sequentially** in a single **transaction**. If any of the mutations fail,
+all the executed mutations will be rolled back.
 
 Run multiple top level mutations transactionally
 ------------------------------------------------
-**Example:** Delete all ``article`` objects written by an author and update the ``author`` object
+**Example:** Delete all ``article`` objects written by an author and update the ``author`` object:
 
 .. graphiql::
   :view_only:
@@ -59,7 +59,7 @@ Insert an object and a nested object in the same mutation
 If you are trying to insert multiple objects which have relationships between them, you can use nested inserts.
 
 **Example:** Insert a new ``article`` object with its ``author`` and return the inserted article object with its author
-in the response
+in the response:
 
 .. graphiql::
   :view_only:

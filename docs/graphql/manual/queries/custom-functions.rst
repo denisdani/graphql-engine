@@ -41,12 +41,12 @@ Custom SQL functions can be created using SQL which can be run in the Hasura con
 
   If the ``SETOF`` table doesn't already exist or your function needs to return a custom type i.e. row set,
   create and track an empty table with the required schema to support the function before executing the above
-  steps
+  steps.
 
 Querying custom functions using GraphQL queries
 -----------------------------------------------
 
-Let's see how we can query custom functions using a GraphQL query by using the below examples:
+Let's see how we can query custom functions using a GraphQL query as via the below examples:
 
 Example: Text-search functions
 ******************************
@@ -115,8 +115,8 @@ First install the `pg_trgm <https://www.postgresql.org/docs/current/pgtrgm.html>
 Next create a GIN (or GIST) index in your database for the columns you'll be querying:
 
 .. code-block:: sql
-      
-  CREATE INDEX address_gin_idx ON property 
+
+  CREATE INDEX address_gin_idx ON property
   USING GIN ((unit || ' ' || num || ' ' || street || ' ' || city || ' ' || region || ' ' || postcode) gin_trgm_ops);
 
 And finally create the custom SQL function in the Hasura console:
@@ -127,7 +127,7 @@ And finally create the custom SQL function in the Hasura console:
   RETURNS SETOF property AS $$
       SELECT *
       FROM property
-      WHERE 
+      WHERE
         search <% (unit || ' ' || num || ' ' || street || ' ' || city || ' ' || region || ' ' || postcode)
       ORDER BY
         similarity(search, (unit || ' ' || num || ' ' || street || ' ' || city || ' ' || region || ' ' || postcode)) DESC
@@ -178,6 +178,8 @@ Assuming the ``property`` table is being tracked, you can use the custom functio
       }
     }
 
+.. _custom_functions_postgis:
+
 Example: PostGIS functions
 **************************
 
@@ -187,7 +189,7 @@ Say you have 2 tables, for user and landmark location data, with the following d
 popular spatial database extension,* `PostGIS <https://postgis.net/>`__):
 
 .. code-block:: sql
-      
+
   -- User location data
   CREATE TABLE user_location (
     user_id INTEGER PRIMARY KEY,
@@ -211,9 +213,8 @@ doesn't exist, let's first create this table and then create our location search
 - create and track the following table:
 
   .. code-block:: sql
-      
-      -- SETOF table
 
+      -- SETOF table
       CREATE TABLE user_landmarks (
         user_id INTEGER,
         location GEOGRAPHY(Point),
@@ -224,9 +225,8 @@ doesn't exist, let's first create this table and then create our location search
 
   .. code-block:: plpgsql
 
-      -- function returns a list of landmarks near a user based on the 
+      -- function returns a list of landmarks near a user based on the
       -- input arguments distance_kms and userid
-
       CREATE FUNCTION search_landmarks_near_user(userid integer, distance_kms integer)
       RETURNS SETOF user_landmarks AS $$
         SELECT  A.user_id, A.location,
@@ -297,7 +297,7 @@ function in our GraphQL API as follows:
 Aggregations on custom functions
 ********************************
 
-You can query aggregations on a function result using ``<function-name>_aggregate`` field.
+You can query aggregations on a function result using the ``<function-name>_aggregate`` field.
 
 **For example**, count the number of articles returned by the function defined in the text-search example above:
 
@@ -320,7 +320,7 @@ As with tables, arguments like ``where``, ``limit``, ``order_by``, ``offset``, e
 function-based queries.
 
 **For example**, limit the number of articles returned by the function defined in the text-search example above:
-    
+
 .. code-block:: graphql
 
     query {
@@ -333,6 +333,112 @@ function-based queries.
         content
       }
     }
+
+Using argument default values for custom functions
+**************************************************
+
+If you omit an argument in the ``args`` input field then the GraphQL engine executes the SQL function without the argument.
+Hence, the function will use the default value of that argument set in its definition.
+
+**For example:** In the above :ref:`PostGIS functions example <custom_functions_postgis>`, the function
+definition can be updated as follows:
+
+.. code-block:: plpgsql
+
+      -- input arguments distance_kms (default: 2) and userid
+      CREATE FUNCTION search_landmarks_near_user(userid integer, distance_kms integer default 2)
+
+Search nearby landmarks with ``distance_kms`` default value which is 2 kms:
+
+.. graphiql::
+  :view_only:
+  :query:
+    query {
+      search_landmarks_near_user(
+        args: {userid: 3}
+      ){
+        user_id
+        location
+        nearby_landmarks
+      }
+    }
+  :response:
+    {
+      "data": {
+        "search_landmarks_near_user": [
+          {
+            "user_id": 3,
+            "location": {
+              "type": "Point",
+              "crs": {
+                "type": "name",
+                "properties": {
+                  "name": "urn:ogc:def:crs:EPSG::4326"
+                }
+              },
+              "coordinates": [
+                12.9406589,
+                77.6185572
+              ]
+            },
+            "nearby_landmarks": [
+              {
+                "id": 3,
+                "name": "blue tokai",
+                "type": "coffee shop",
+                "location": "0101000020E61000004E74A785DCF22940BE44060399665340"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+
+Accessing Hasura session variables in custom functions
+******************************************************
+
+Use the v2 :ref:`track_function <track_function_v2>` to add a function by defining a session argument.
+The session argument will be a JSON object where keys are session variable names (in lower case) and values are strings.
+Use the ``->>`` JSON operator to fetch the value of a session variable as shown in the following example.
+
+.. code-block:: plpgsql
+
+      -- single text column table
+      CREATE TABLE text_result(
+        result text
+      );
+
+      -- simple function which returns the hasura role
+      -- where 'hasura_session' will be session argument
+      CREATE FUNCTION get_session_role(hasura_session json)
+      RETURNS SETOF text_result AS $$
+          SELECT q.* FROM (VALUES (hasura_session ->> 'x-hasura-role')) q
+      $$ LANGUAGE sql STABLE;
+
+
+.. graphiql::
+  :view_only:
+  :query:
+     query {
+         get_session_role {
+             result
+         }
+     }
+  :response:
+    {
+        "data": {
+            "get_session_role": [
+                {
+                    "result": "admin"
+                }
+             ]
+        }
+    }
+
+.. note::
+
+   The specified session argument will not be included in the ``<function-name>_args`` input object in the GraphQL schema.
 
 Permissions for custom function queries
 ---------------------------------------
